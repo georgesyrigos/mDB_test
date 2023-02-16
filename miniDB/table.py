@@ -244,12 +244,12 @@ class Table:
         if condition is not None:
             #not
             if "NOT" in condition.split() or "not" in condition.split():
-            con_lst = condition.split("NOT")
-            con_lst = con_lst[0].split("not")
-            column_name, operator, value = self._parse_condition(con_lst[1])
-            column = self.column_by_name(column_name)
-            sec_op = reverse_op(operator)
-            rows  = [ind for ind, x in enumerate(column) if get_op(sec_op, x, value)]
+                con_lst = condition.split("NOT")
+                con_lst = con_lst[0].split("not")
+                column_name, operator, value = self._parse_condition(con_lst[1])
+                column = self.column_by_name(column_name)
+                sec_op = reverse_op(operator)
+                rows  = [ind for ind, x in enumerate(column) if get_op(sec_op, x, value)]
             #between
             elif "BETWEEN" in condition.split() or "between" in condition.split():
                 con_split = condition.split()
