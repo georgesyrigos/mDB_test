@@ -205,7 +205,7 @@ class Table:
         # self._update()
         # we have to return the deleted indexes, since they will be appended to the insert_stack
         return indexes_to_del
-
+    
 
     def _select_where(self, return_columns, condition=None, distinct=False, order_by=None, desc=True, limit=None):
         '''
@@ -229,6 +229,32 @@ class Table:
             return_cols = [i for i in range(len(self.column_names))]
         else:
             return_cols = [self.column_names.index(col.strip()) for col in return_columns.split(',')]
+
+
+       
+       
+        #create operators 
+        if condition is not None:
+        #not
+        elif "NOT" in condition.split() or "not" in condition.split():
+            #condition_list = condition.split("NOT")
+            #condition_list = condition_list[0].split("not")
+
+            column_name, operator, value = self._parse_condition(condition_list[1])
+            column = self.column_by_name(column_name)
+            operator2 = reverse_op(operator)
+            rows  = [ind for ind, x in enumerate(column) if get_op(operator2, x, value)]
+
+        #not 2nd way
+        if "NOT" in condition.split() or "not" in condition.split():
+            con_lst = condition.split("NOT")
+            con_lst = con_lst[0].split("not")
+
+            column_name, operator, value = self._parse_condition(con_lst[1])
+            column = self.column_by_name(column_name)
+            sec_op = reverse_op(operator)
+            rows  = [ind for ind, x in enumerate(column) if get_op(sec_op, x, value)] 
+               
 
         # if condition is None, return all rows
         # if not, return the rows with values where condition is met for value
