@@ -67,6 +67,6 @@ or run a specific sql file with multiple commands using the following syntax:
 ```
 DB=smdb SQL=YOUR_FILE python3.9 mdb.py
 ```
-
+##iraklis
 ## The people
 George S. Theodoropoulos, Yannis Kontoulis, Yannis Theodoridis; Data Science Lab., University of Piraeus.
