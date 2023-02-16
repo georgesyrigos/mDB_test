@@ -333,6 +333,33 @@ class Database:
 
     def select(self, columns, table_name, condition, distinct=None, order_by=None, \
                limit=True, desc=None, save_as=None, return_object=True):
+        #check operators
+        if condition is None:
+            condition_column = ""
+        else
+        #elegxoyme an an stin synthiki exoyme between,not,and,or kai to eisagoyme sto condition column
+        #to prwto stoixeio toy condition meta to split()
+
+        #elegxos an mesa sto condition yparxei and,or,not,between
+        #An nai tote eisagoyme to prwto stoixeio ths syntikis meta to split sto condition column
+        
+            if "BETWEEN" in condition.split() or "between" in condition.split():
+                condition_column = condition.split(" ")[0]
+            elif "NOT" in condition.split() or "not" in condition.split():
+                condition_column = condition.split(" ")[0]
+            elif "AND" in condition.split() or "and" in condition.split() or "OR" in condition.split() or "or" in condition.split():
+                condition_column = condition.split(" ")[0]
+            else
+                condition_column = split_condition(condition)[0]
+
+            #2nd way
+            #if "BETWEEN" in condition.split() or "NOT" in condition.split() or  elif "AND" in condition.split() or "OR" in condition.split():
+            #   condition_column = condition.split(" ")[0]
+            #elif "between" in condition.split() or "not" in condition.split() or "and" in condition.split() or "or" in condition.split():
+            #   condition_column = condition.split(" ")[0]
+            #else
+            #   condition_column = split_condition(" ")[0] 
+
         '''
         Selects and outputs a table's data where condtion is met.
 
