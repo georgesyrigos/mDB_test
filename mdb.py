@@ -121,6 +121,28 @@ def create_query_plan(query, keywords, action):
         else:
             dic['force'] = False
 
+    #ftiaxnoume to dictionery me to query plan gia tin dimiourgia index.
+    #Den ginetai edw elegxos gia to an uparxei h sthlh,pinakas
+    if action=='create index':
+        split_con=dic[kw_in_query[1]].split() 
+        split_con.remove("(")
+        split_con.remove(")")
+
+        dic['create index'] = dic[kw_in_query[0]]
+        dic['on'] = split_con[0]
+        dic['column'] = split_con[1]
+        dic['using'] = dic[kw_in_query[2]]
+
+    #2nd way
+    #Δημιουργια index που απαιτει την υπαρξη dictionery το οποιο υλοποιουμε μεσω query plan 
+    if action=='create index':
+        con_split = dic[kw_in_query[1]].split()
+        con_split.remove("(")
+        con_split.remove(")")
+        dic['create index'] = dic[kw_in_query[0]]
+        dic['on'] = con_split[0]
+        dic['column'] = con_split[1]
+        dic['using'] = dic[kw_in_query[2]]
     return dic
 
 
@@ -175,7 +197,7 @@ def interpret(query):
                      'unlock table': ['unlock table', 'force'],
                      'delete from': ['delete from', 'where'],
                      'update table': ['update table', 'set', 'where'],
-                     'create index': ['create index', 'on', 'using'],
+                     'create index': ['create index', 'on',  'column' ,'using'],
                      'drop index': ['drop index'],
                      'create view' : ['create view', 'as']
                      }
