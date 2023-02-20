@@ -54,7 +54,8 @@ class Database:
         self.create_table('meta_length', 'table_name,no_of_rows', 'str,int')
         self.create_table('meta_locks', 'table_name,pid,mode', 'str,int,str')
         self.create_table('meta_insert_stack', 'table_name,indexes', 'str,list')
-        self.create_table('meta_indexes', 'table_name,index_name', 'str,str')
+        #prosthetoume sthlh ston pinaka gia to column_name toy index. Prepei na ksanafortwsoume thn vash gia ftiaxtei o pinakas me parapanw sthlh
+        self.create_table('meta_indexes', 'table_name,index_name,column_name', 'str,str,str')
         self.save_database()
 
     def save_database(self):
@@ -205,7 +206,7 @@ class Database:
             filename = f'{table_name}.csv'
 
         with open(filename, 'w') as file:
-           file.write(res)
+            file.write(res)
 
     def table_from_object(self, new_table):
         '''
@@ -358,7 +359,17 @@ class Database:
             return table_name._select_where(columns, condition, distinct, order_by, desc, limit)
 
         if condition is not None:
-            condition_column = split_condition(condition)[0]
+            # Tsekaroume an stin sumthiki exoume betweeen, not,and,or kai to eisagoume stin metavliti condition_column
+            #to prwto stoixeio tou condition meta apo .split("").
+
+            if "BETWEEN" in condition.split() or "between" in condition.split():
+                condition_column = condition.split(" ")[0]
+            elif "NOT" in condition.split() or "not" in condition.split():
+                condition_column = condition.split(" ")[0]
+            elif "AND" in condition.split() or "and" in condition.split() or "OR" in condition.split() or "or" in condition.split():
+                condition_column = condition.split(" ")[0]
+            else:
+                condition_column = split_condition(condition)[0]
         else:
             condition_column = ''
 
@@ -369,7 +380,11 @@ class Database:
         if self._has_index(table_name) and condition_column==self.tables[table_name].column_names[self.tables[table_name].pk_idx]:
             index_name = self.select('*', 'meta_indexes', f'table_name={table_name}', return_object=True).column_by_name('index_name')[0]
             bt = self._load_idx(index_name)
-            table = self.tables[table_name]._select_where_with_btree(columns, bt, condition, distinct, order_by, desc, limit)
+            try:
+                table = self.tables[table_name]._select_where_with_btree(columns, bt, condition, distinct, order_by, desc,
+                                                                     limit)
+            except:
+                table = self.tables[table_name]._select_where_with_hash(columns, bt, condition, distinct, order_by, desc, limit) # if btree fails it is hash index
         else:
             table = self.tables[table_name]._select_where(columns, condition, distinct, order_by, desc, limit)
         # self.unlock_table(table_name)
@@ -650,7 +665,8 @@ class Database:
 
 
     # indexes
-    def create_index(self, index_name, table_name, index_type='btree'):
+    #prosthetoume ena argument pou afora to column tou pinaka. 
+    def create_index(self, index_name, table_name, column_name, index_type):
         '''
         Creates an index on a specified table with a given name.
         Important: An index can only be created on a primary key (the user does not specify the column).
@@ -659,21 +675,37 @@ class Database:
             table_name: string. Table name (must be part of database).
             index_name: string. Name of the created index.
         '''
-        if self.tables[table_name].pk_idx is None: # if no primary key, no index
-            raise Exception('Cannot create index. Table has no primary key.')
-        if index_name not in self.tables['meta_indexes'].column_by_name('index_name'):
+        #Afairoume to exception gia na epitrepei index se oles tis stiles
+        #if self.tables[table_name].pk_idx is None:  # if no primary key, no index
+        #    raise Exception('Cannot create index. Table has no primary key.')
+
+
+        if table_name not in self.tables:   #an den uparxei o pinakas
+            raise Exception('Cannot create index. Table does not exist')
+
+        if column_name not in self.tables[table_name].column_names:   #an den uparxei h sthlh
+            raise Exception('Cannot create index. Column does not exist')    
+
+        if index_name not in self.tables['meta_indexes'].column_by_name('index_name'):  #an to index_name uparxei ksana
             # currently only btree is supported. This can be changed by adding another if.
-            if index_type=='btree':
+            if index_type == 'BTREE' or index_type == 'btree':
                 logging.info('Creating Btree index.')
                 # insert a record with the name of the index and the table on which it's created to the meta_indexes table
-                self.tables['meta_indexes']._insert([table_name, index_name])
+                self.tables['meta_indexes']._insert([table_name, index_name, column_name])
                 # crate the actual index
-                self._construct_index(table_name, index_name)
+                self._construct_index(table_name, index_name, column_name)
+                self.save_database()
+            elif index_type == 'HASH' or index_type == 'hash':
+                logging.info('Creating Hash index')
+                # insert a record with the name of the index and the table on which it's created to the meta_indexes table
+                self.tables['meta_indexes']._insert([table_name, index_name, column_name])
+                # crate the actual index
+                self._construct_index_hash(table_name, index_name, column_name)
                 self.save_database()
         else:
             raise Exception('Cannot create index. Another index with the same name already exists.')
 
-    def _construct_index(self, table_name, index_name):
+     def _construct_index(self, table_name, index_name, column_name):  #prosthetoume argument to column tou index
         '''
         Construct a btree on a table and save.
 
@@ -684,13 +716,46 @@ class Database:
         bt = Btree(3) # 3 is arbitrary
 
         # for each record in the primary key of the table, insert its value and index to the btree
-        for idx, key in enumerate(self.tables[table_name].column_by_name(self.tables[table_name].pk)):
+        for idx, key in enumerate(self.tables[table_name].column_by_name(column_name)):
             if key is None:
                 continue
             bt.insert(key, idx)
         # save the btree
         self._save_index(index_name, bt)
 
+        return
+
+    def _construct_index_hash(self, table_name, index_name, column_name):
+        row_len = len(self.tables[table_name].data)
+        hm = {}
+        hm[0] = {}
+        hm[0][0] = [str(row_len)] # store the number of the rows
+        for idx, key in enumerate(self.tables[table_name].column_by_name(column_name)):
+                if key is None:
+                    continue
+
+                hash_sum = 0
+                for letter in key:
+                    hash_sum += ord(letter)
+
+                hash_index = hash_sum % row_len
+
+                sub_hash_index = hash_index
+                if not(hash_index in hm):
+                    hm[hash_index] = {}
+                else:
+                    while True:
+                        if not(sub_hash_index in hm[hash_index]):
+                            break
+
+                        if (sub_hash_index == row_len):
+                            sub_hash_index = 0
+                        else:
+                            sub_hash_index += 1
+
+                hm[hash_index][sub_hash_index] = [idx, key]
+
+        self._save_index(index_name, hm)
 
     def _has_index(self, table_name):
         '''
@@ -746,3 +811,5 @@ class Database:
 
             self.save_database()
         
+        else:
+            raise Exception('Index does not exist')  #extra prosthiki kata tin diarkeia tou index.
