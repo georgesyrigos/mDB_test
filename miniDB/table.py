@@ -1,5 +1,5 @@
 from __future__ import annotations
-from misc import get_op, split_condition, reverse_op
+from miniDB.misc import get_op, split_condition, reverse_op
 from tabulate import tabulate
 import pickle
 import os

@@ -1,5 +1,5 @@
 from __future__ import annotations
-from table import Table
+from miniDB.table import Table
 from misc import split_condition
 from btree import Btree
 from joins import Inlj, Smj
@@ -15,10 +15,10 @@ from tabulate import tabulate
 
 sys.path.append(
     f'{os.path.dirname(os.path.dirname(os.path.abspath(__file__)))}/miniDB')
-sys.modules['table'] = table
 
 
-# readline.clear_history()
+sys.modules['table'] = table  # readline.clear_history()
+
 
 class Database:
     '''

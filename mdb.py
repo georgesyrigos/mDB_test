@@ -1,3 +1,5 @@
+from miniDB.table import Table
+from miniDB.database import Database
 import os
 import re
 from pprint import pprint
@@ -6,9 +8,6 @@ import readline
 import traceback
 import shutil
 sys.path.append('miniDB')
-
-from database import Database
-from table import Table
 # art font is "big"
 art = '''
              _         _  _____   ____  
@@ -17,7 +16,7 @@ art = '''
  | '_ ` _ \ | || '_ \ | || |  | ||  _ < 
  | | | | | || || | | || || |__| || |_) |
  |_| |_| |_||_||_| |_||_||_____/ |____/   2022                              
-'''   
+'''
 
 
 def search_between(s, first, last):
@@ -25,17 +24,18 @@ def search_between(s, first, last):
     Search in 's' for the substring that is between 'first' and 'last'
     '''
     try:
-        start = s.index( first ) + len( first )
-        end = s.index( last, start )
+        start = s.index(first) + len(first)
+        end = s.index(last, start)
     except:
         return
     return s[start:end].strip()
+
 
 def in_paren(qsplit, ind):
     '''
     Split string on space and return whether the item in index 'ind' is inside a parentheses
     '''
-    return qsplit[:ind].count('(')>qsplit[:ind].count(')')
+    return qsplit[:ind].count('(') > qsplit[:ind].count(')')
 
 
 def create_query_plan(query, keywords, action):
@@ -45,37 +45,35 @@ def create_query_plan(query, keywords, action):
     This can and will be used recursively
     '''
 
-    dic = {val: None for val in keywords if val!=';'}
+    dic = {val: None for val in keywords if val != ';'}
 
-    ql = [val for val in query.split(' ') if val !='']
+    ql = [val for val in query.split(' ') if val != '']
 
     kw_in_query = []
     kw_positions = []
-    i=0
-    while i<len(ql):
-        if in_paren(ql, i): 
-            i+=1
+    i = 0
+    while i < len(ql):
+        if in_paren(ql, i):
+            i += 1
             continue
         if ql[i] in keywords:
             kw_in_query.append(ql[i])
             kw_positions.append(i)
-        
-        elif i!=len(ql)-1 and f'{ql[i]} {ql[i+1]}' in keywords:
+
+        elif i != len(ql)-1 and f'{ql[i]} {ql[i+1]}' in keywords:
             kw_in_query.append(f'{ql[i]} {ql[i+1]}')
             ql[i] = ql[i]+' '+ql[i+1]
             ql.pop(i+1)
             kw_positions.append(i)
-        i+=1
-        
-
+        i += 1
 
     for i in range(len(kw_in_query)-1):
         dic[kw_in_query[i]] = ' '.join(ql[kw_positions[i]+1:kw_positions[i+1]])
-    
+
     if action == 'create view':
         dic['as'] = interpret(dic['as'])
 
-    if action=='select':
+    if action == 'select':
         dic = evaluate_from_clause(dic)
 
         if dic['distinct'] is not None:
@@ -88,13 +86,15 @@ def create_query_plan(query, keywords, action):
                 dic['desc'] = True
             else:
                 dic['desc'] = False
-            dic['order by'] = dic['order by'].removesuffix(' asc').removesuffix(' desc')
-            
+            dic['order by'] = dic['order by'].removesuffix(
+                ' asc').removesuffix(' desc')
+
         else:
             dic['desc'] = None
 
-    if action=='create table':
-        args = dic['create table'][dic['create table'].index('('):dic['create table'].index(')')+1]
+    if action == 'create table':
+        args = dic['create table'][dic['create table'].index(
+            '('):dic['create table'].index(')')+1]
         dic['create table'] = dic['create table'].removesuffix(args).strip()
         arg_nopk = args.replace('primary key', '')[1:-1]
         arglist = [val.strip().split(' ') for val in arg_nopk.split(',')]
@@ -105,25 +105,26 @@ def create_query_plan(query, keywords, action):
             dic['primary key'] = arglist[arglist.index('primary')-2]
         else:
             dic['primary key'] = None
-    
-    if action=='import': 
-        dic = {'import table' if key=='import' else key: val for key, val in dic.items()}
 
-    if action=='insert into':
+    if action == 'import':
+        dic = {'import table' if key ==
+               'import' else key: val for key, val in dic.items()}
+
+    if action == 'insert into':
         if dic['values'][0] == '(' and dic['values'][-1] == ')':
             dic['values'] = dic['values'][1:-1]
         else:
             raise ValueError('Your parens are not right m8')
-    
-    if action=='unlock table':
+
+    if action == 'unlock table':
         if dic['force'] is not None:
             dic['force'] = True
         else:
             dic['force'] = False
 
-    #ftiaxnoume to dictionery me to query plan gia tin dimiourgia index. Den ginetai edw elegxos gia to an uparxei h sthlh,pinakas
-    if action=='create index':
-        split_con=dic[kw_in_query[1]].split() 
+    # ftiaxnoume to dictionery me to query plan gia tin dimiourgia index. Den ginetai edw elegxos gia to an uparxei h sthlh,pinakas
+    if action == 'create index':
+        split_con = dic[kw_in_query[1]].split()
         split_con.remove("(")
         split_con.remove(")")
 
@@ -133,7 +134,6 @@ def create_query_plan(query, keywords, action):
         dic['using'] = dic[kw_in_query[2]]
 
     return dic
-
 
 
 def evaluate_from_clause(dic):
@@ -146,8 +146,10 @@ def evaluate_from_clause(dic):
         subquery = ' '.join(from_split[1:-1])
         dic['from'] = interpret(subquery)
 
-    join_idx = [i for i,word in enumerate(from_split) if word=='join' and not in_paren(from_split,i)]
-    on_idx = [i for i,word in enumerate(from_split) if word=='on' and not in_paren(from_split,i)]
+    join_idx = [i for i, word in enumerate(
+        from_split) if word == 'join' and not in_paren(from_split, i)]
+    on_idx = [i for i, word in enumerate(
+        from_split) if word == 'on' and not in_paren(from_split, i)]
     if join_idx:
         join_idx = join_idx[0]
         on_idx = on_idx[0]
@@ -168,8 +170,9 @@ def evaluate_from_clause(dic):
             join_dic['right'] = interpret(join_dic['right'][1:-1].strip())
 
         dic['from'] = join_dic
-        
+
     return dic
+
 
 def interpret(query):
     '''
@@ -188,13 +191,14 @@ def interpret(query):
                      'update table': ['update table', 'set', 'where'],
                      'create index': ['create index', 'on',  'column', 'using'],
                      'drop index': ['drop index'],
-                     'create view' : ['create view', 'as']
+                     'create view': ['create view', 'as']
                      }
 
-    if query[-1]!=';':
-        query+=';'
-    
-    query = query.replace("(", " ( ").replace(")", " ) ").replace(";", " ;").strip()
+    if query[-1] != ';':
+        query += ';'
+
+    query = query.replace(
+        "(", " ( ").replace(")", " ) ").replace(";", " ;").strip()
 
     for kw in kw_per_action.keys():
         if query.startswith(kw):
@@ -202,16 +206,18 @@ def interpret(query):
 
     return create_query_plan(query, kw_per_action[action]+[';'], action)
 
+
 def execute_dic(dic):
     '''
     Execute the given dictionary
     '''
     for key in dic.keys():
-        if isinstance(dic[key],dict):
+        if isinstance(dic[key], dict):
             dic[key] = execute_dic(dic[key])
-    
-    action = list(dic.keys())[0].replace(' ','_')
+
+    action = list(dic.keys())[0].replace(' ', '_')
     return getattr(db, action)(*dic.values())
+
 
 def interpret_meta(command):
     """
@@ -226,24 +232,25 @@ def interpret_meta(command):
     """
     action = command.split(' ')[0].removesuffix(';')
 
-    db_name = db._name if search_between(command, action,';')=='' else search_between(command, action,';')
+    db_name = db._name if search_between(
+        command, action, ';') == '' else search_between(command, action, ';')
 
     verbose = True
     if action == 'cdb' and ' -noverb' in db_name:
-        db_name = db_name.replace(' -noverb','')
+        db_name = db_name.replace(' -noverb', '')
         verbose = False
 
     def list_databases(db_name):
         [print(fold.removesuffix('_db')) for fold in os.listdir('dbdata')]
-    
+
     def list_tables(db_name):
-        [print(pklf.removesuffix('.pkl')) for pklf in os.listdir(f'dbdata/{db_name}_db') if pklf.endswith('.pkl')\
+        [print(pklf.removesuffix('.pkl')) for pklf in os.listdir(f'dbdata/{db_name}_db') if pklf.endswith('.pkl')
             and not pklf.startswith('meta')]
 
     def change_db(db_name):
         global db
         db = Database(db_name, load=True, verbose=verbose)
-    
+
     def remove_db(db_name):
         shutil.rmtree(f'dbdata/{db_name}_db')
 
@@ -263,20 +270,18 @@ if __name__ == "__main__":
 
     db = Database(dbname, load=True)
 
-    
-
     if fname is not None:
         for line in open(fname, 'r').read().splitlines():
-            if line.startswith('--'): continue
+            if line.startswith('--'):
+                continue
             if line.startswith('explain'):
                 dic = interpret(line.removeprefix('explain '))
                 pprint(dic, sort_dicts=False)
-            else :
+            else:
                 dic = interpret(line.lower())
                 result = execute_dic(dic)
-                if isinstance(result,Table):
+                if isinstance(result, Table):
                     result.show()
-        
 
     from prompt_toolkit import PromptSession
     from prompt_toolkit.history import FileHistory
@@ -286,14 +291,15 @@ if __name__ == "__main__":
     session = PromptSession(history=FileHistory('.inp_history'))
     while 1:
         try:
-            line = session.prompt(f'({db._name})> ', auto_suggest=AutoSuggestFromHistory()).lower()
-            if line[-1]!=';':
-                line+=';'
+            line = session.prompt(
+                f'({db._name})> ', auto_suggest=AutoSuggestFromHistory()).lower()
+            if line[-1] != ';':
+                line += ';'
         except (KeyboardInterrupt, EOFError):
             print('\nbye!')
             break
         try:
-            if line=='exit':
+            if line == 'exit':
                 break
             if line.split(' ')[0].removesuffix(';') in ['lsdb', 'lstb', 'cdb', 'rmdb']:
                 interpret_meta(line)
@@ -303,64 +309,70 @@ if __name__ == "__main__":
             else:
                 dic = interpret(line)
                 result = execute_dic(dic)
-                if isinstance(result,Table):
+                if isinstance(result, Table):
                     result.show()
         except Exception:
             print(traceback.format_exc())
 
-def create_query_plan2(query, keywords, action): #query plan gia  #σθ1∧θ2(E) = σθ1(σθ2(E))
+
+# query plan gia  #σθ1∧θ2(E) = σθ1(σθ2(E))
+def create_query_plan2(query, keywords, action):
     '''
     Given a query, the set of keywords that we expect to pe present and the overall action, return the query plan for this query.
     This can and will be used recursively
     '''
 
-    dic = {val: None for val in keywords if val!=';'}
+    dic = {val: None for val in keywords if val != ';'}
 
-    ql = [val for val in query.split(' ') if val !='']
+    ql = [val for val in query.split(' ') if val != '']
 
     kw_in_query = []
     kw_positions = []
-    i=0
-    while i<len(ql):
-        if in_paren(ql, i): 
-            i+=1
+    i = 0
+    while i < len(ql):
+        if in_paren(ql, i):
+            i += 1
             continue
         if ql[i] in keywords:
             kw_in_query.append(ql[i])
             kw_positions.append(i)
 
-        elif i!=len(ql)-1 and f'{ql[i]} {ql[i+1]}' in keywords:
+        elif i != len(ql)-1 and f'{ql[i]} {ql[i+1]}' in keywords:
             kw_in_query.append(f'{ql[i]} {ql[i+1]}')
             ql[i] = ql[i]+' '+ql[i+1]
             ql.pop(i+1)
             kw_positions.append(i)
-        i+=1
-
+        i += 1
 
     for i in range(len(kw_in_query)-1):
         dic[kw_in_query[i]] = ' '.join(ql[kw_positions[i]+1:kw_positions[i+1]])
 
+    if action == 'select':
+        # taktopoioume to FROM  Gia tin  ISODUNAMIS: E1 ⊲⊳θ E2 = E2 ⊲⊳θ E1
+        dic = evaluate_from_clause2(dic)
 
-
-    if action=='select':
-        dic = evaluate_from_clause2(dic) #taktopoioume to FROM  Gia tin  ISODUNAMIS: E1 ⊲⊳θ E2 = E2 ⊲⊳θ E1 
-
-        #σθ1∧θ2(E) = σθ1(σθ2(E))  ISODYNAMIES
-        if "and" in dic[kw_in_query[2]]:    #theoroume oti o xristis exei valei parentheseis sto condition
-            split_con=dic[kw_in_query[2]].split() 
+        # σθ1∧θ2(E) = σθ1(σθ2(E))  ISODYNAMIES
+        # theoroume oti o xristis exei valei parentheseis sto condition
+        if "and" in dic[kw_in_query[2]]:
+            split_con = dic[kw_in_query[2]].split()
             if ("()" in split_con) or (")" in split_con):
                 split_con.remove("(")
                 split_con.remove(")")
                 split_con.remove("(")
                 split_con.remove(")")
 
-            query_s1 = ''.join(split_con[0]) 
-            query_s2 = ''.join(split_con[2])    
-            query_s2_E= interpret("select" + dic[kw_in_query[0]] + "from" + dic[kw_in_query[1]] + "where" + query_s2 ) #stelnoume gia ektelesi to kommati s2(E)
+            query_s1 = ''.join(split_con[0])
+            query_s2 = ''.join(split_con[2])
+            # stelnoume gia ektelesi to kommati s2(E)
+            query_s2_E = interpret(
+                "select" + dic[kw_in_query[0]] + "from" + dic[kw_in_query[1]] + "where" + query_s2)
 
-            query_se_e= interpret("select" + dic[kw_in_query[0]] + "from" + query_s2_E + "where" +  query_s1) #stelnoume gia ektelesi thn teliki synthiki
+            # stelnoume gia ektelesi thn teliki synthiki
+            query_se_e = interpret(
+                "select" + dic[kw_in_query[0]] + "from" + query_s2_E + "where" + query_s1)
 
-            dic['where'] = query_se_e #to apotelesmaa twn 2 praksewn to vazoume to dic['where'] 
+            # to apotelesmaa twn 2 praksewn to vazoume to dic['where']
+            dic['where'] = query_se_e
 
         if dic['distinct'] is not None:
             dic['select'] = dic['distinct']
@@ -372,67 +384,73 @@ def create_query_plan2(query, keywords, action): #query plan gia  #σθ1∧θ2(E
                 dic['desc'] = True
             else:
                 dic['desc'] = False
-            dic['order by'] = dic['order by'].removesuffix(' asc').removesuffix(' desc')
+            dic['order by'] = dic['order by'].removesuffix(
+                ' asc').removesuffix(' desc')
 
         else:
             dic['desc'] = None
 
-        return dic    
+        return dic
 
 
-def create_query_plan3(query, keywords, action):  #query plan gia #σθ1∧θ2(E) = σθ2(σθ1(E))
+# query plan gia #σθ1∧θ2(E) = σθ2(σθ1(E))
+def create_query_plan3(query, keywords, action):
     '''
     Given a query, the set of keywords that we expect to pe present and the overall action, return the query plan for this query.
     This can and will be used recursively
     '''
 
-    dic = {val: None for val in keywords if val!=';'}
+    dic = {val: None for val in keywords if val != ';'}
 
-    ql = [val for val in query.split(' ') if val !='']
+    ql = [val for val in query.split(' ') if val != '']
 
     kw_in_query = []
     kw_positions = []
-    i=0
-    while i<len(ql):
-        if in_paren(ql, i): 
-            i+=1
+    i = 0
+    while i < len(ql):
+        if in_paren(ql, i):
+            i += 1
             continue
         if ql[i] in keywords:
             kw_in_query.append(ql[i])
             kw_positions.append(i)
 
-        elif i!=len(ql)-1 and f'{ql[i]} {ql[i+1]}' in keywords:
+        elif i != len(ql)-1 and f'{ql[i]} {ql[i+1]}' in keywords:
             kw_in_query.append(f'{ql[i]} {ql[i+1]}')
             ql[i] = ql[i]+' '+ql[i+1]
             ql.pop(i+1)
             kw_positions.append(i)
-        i+=1
-
+        i += 1
 
     for i in range(len(kw_in_query)-1):
         dic[kw_in_query[i]] = ' '.join(ql[kw_positions[i]+1:kw_positions[i+1]])
 
+    if action == 'select':
+        # taktopoioume to FROM  Gia tin  ISODUNAMIS: E1 ⊲⊳θ E2 = E2 ⊲⊳θ E1
+        dic = evaluate_from_clause2(dic)
 
-
-    if action=='select':
-        dic = evaluate_from_clause2(dic) #taktopoioume to FROM  Gia tin  ISODUNAMIS: E1 ⊲⊳θ E2 = E2 ⊲⊳θ E1 
-
-        #σθ1∧θ2(E) = σθ2(σθ1(E))  ISODYNAMIS
-        if "and" in dic[kw_in_query[2]]:    #theoroume oti o xristis exei valei parentheseis sto condition
-            split_con=dic[kw_in_query[2]].split() 
+        # σθ1∧θ2(E) = σθ2(σθ1(E))  ISODYNAMIS
+        # theoroume oti o xristis exei valei parentheseis sto condition
+        if "and" in dic[kw_in_query[2]]:
+            split_con = dic[kw_in_query[2]].split()
             if ("()" in split_con) or (")" in split_con):
                 split_con.remove("(")
                 split_con.remove(")")
                 split_con.remove("(")
                 split_con.remove(")")
 
-            query_s1 = ''.join(split_con[0]) 
-            query_s2 = ''.join(split_con[2])    
-            query_s1_E= interpret("select" + dic[kw_in_query[0]] + "from" + dic[kw_in_query[1]] + "where" + query_s1 ) #stelnoume gia ektelesi to kommati s1(E)
+            query_s1 = ''.join(split_con[0])
+            query_s2 = ''.join(split_con[2])
+            # stelnoume gia ektelesi to kommati s1(E)
+            query_s1_E = interpret(
+                "select" + dic[kw_in_query[0]] + "from" + dic[kw_in_query[1]] + "where" + query_s1)
 
-            query_se_e= interpret("select" + dic[kw_in_query[0]] + "from" + query_s1_E + "where" +  query_s2 ) #stelnoume gia ektelesi thn teliki synthiki
+            # stelnoume gia ektelesi thn teliki synthiki
+            query_se_e = interpret(
+                "select" + dic[kw_in_query[0]] + "from" + query_s1_E + "where" + query_s2)
 
-            dic['where'] = query_se_e #to apotelesmaa twn 2 praksewn to vazoume to dic['where'] 
+            # to apotelesmaa twn 2 praksewn to vazoume to dic['where']
+            dic['where'] = query_se_e
 
         if dic['distinct'] is not None:
             dic['select'] = dic['distinct']
@@ -444,15 +462,17 @@ def create_query_plan3(query, keywords, action):  #query plan gia #σθ1∧θ2(E
                 dic['desc'] = True
             else:
                 dic['desc'] = False
-            dic['order by'] = dic['order by'].removesuffix(' asc').removesuffix(' desc')
+            dic['order by'] = dic['order by'].removesuffix(
+                ' asc').removesuffix(' desc')
 
         else:
             dic['desc'] = None
 
-        return dic    
+        return dic
 
 
-def evaluate_from_clause2(dic): #ulopoiish E1 ⊲⊳θ E2 = E2 ⊲⊳θ E1. EInai enalaktikh sunartish tou > def evaluate_from_clause(dic)
+# ulopoiish E1 ⊲⊳θ E2 = E2 ⊲⊳θ E1. EInai enalaktikh sunartish tou > def evaluate_from_clause(dic)
+def evaluate_from_clause2(dic):
     '''
     Evaluate the part of the query (argument or subquery) that is supplied as the 'from' argument
     '''
@@ -462,8 +482,10 @@ def evaluate_from_clause2(dic): #ulopoiish E1 ⊲⊳θ E2 = E2 ⊲⊳θ E1. EIna
         subquery = ' '.join(from_split[1:-1])
         dic['from'] = interpret(subquery)
 
-    join_idx = [i for i,word in enumerate(from_split) if word=='join' and not in_paren(from_split,i)]
-    on_idx = [i for i,word in enumerate(from_split) if word=='on' and not in_paren(from_split,i)]
+    join_idx = [i for i, word in enumerate(
+        from_split) if word == 'join' and not in_paren(from_split, i)]
+    on_idx = [i for i, word in enumerate(
+        from_split) if word == 'on' and not in_paren(from_split, i)]
     if join_idx:
         join_idx = join_idx[0]
         on_idx = on_idx[0]
