@@ -742,7 +742,7 @@ class Database:
             if os.path.isfile(f'{self.savedir}/indexes/meta_{index_name}_index.pkl'):
                 os.remove(f'{self.savedir}/indexes/meta_{index_name}_index.pkl')
             else:
-                raise Exception('Index not found')  #added index exception.
+                warnings.warn(f'"{self.savedir}/indexes/meta_{index_name}_index.pkl" not found.')
 
             self.save_database()
         
