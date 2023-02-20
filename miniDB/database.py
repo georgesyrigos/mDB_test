@@ -1,5 +1,5 @@
 from __future__ import annotations
-from table import Table
+from miniDB.table import Table
 from misc import split_condition
 from btree import Btree
 from joins import Inlj, Smj
