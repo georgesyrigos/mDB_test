@@ -1,5 +1,3 @@
-from table.py import Table
-from database.py import Database
 import os
 import re
 from pprint import pprint
