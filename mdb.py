@@ -1,3 +1,5 @@
+from table import Table
+from database import Database
 import os
 import re
 from pprint import pprint
@@ -177,7 +179,7 @@ def interpret(query):
                      'unlock table': ['unlock table', 'force'],
                      'delete from': ['delete from', 'where'],
                      'update table': ['update table', 'set', 'where'],
-                     'create index': ['create index', 'on', 'column' 'using'],
+                     'create index': ['create index', 'on', 'column', 'using'],
                      'drop index': ['drop index'],
                      'create view': ['create view', 'as']
                      }
