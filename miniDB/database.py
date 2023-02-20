@@ -670,7 +670,7 @@ class Database:
 
     # indexes
 
-    def create_index(self, index_name, table_name, index_type='btree'):
+    def create_index(self, index_name, table_name, column_name, index_type):
         '''
         Creates an index on a specified table with a given name.
         Important: An index can only be created on a primary key (the user does not specify the column).
@@ -679,16 +679,35 @@ class Database:
             table_name: string. Table name (must be part of database).
             index_name: string. Name of the created index.
         '''
-        if self.tables[table_name].pk_idx is None:  # if no primary key, no index
-            raise Exception('Cannot create index. Table has no primary key.')
+        # Afairoume to exception gia na epitrepei index se oles tis stiles
+        # if self.tables[table_name].pk_idx is None:  # if no primary key, no index
+        # raise Exception('Cannot create index. Table has no primary key.')
+
+        if table_name not in self.tables:  # an den uparxei o pinakas
+            raise Exception('Cannot create index. Table does not exist')
+
+        # an den uparxei h sthlh
+        if column_name not in self.tables[table_name].column_names:
+            raise Exception('Cannot create index. Column does not exist')
+
+        # an to index_name uparxei ksana
         if index_name not in self.tables['meta_indexes'].column_by_name('index_name'):
             # currently only btree is supported. This can be changed by adding another if.
-            if index_type == 'btree':
+            if index_type == 'BTREE' or index_type == 'btree':
                 logging.info('Creating Btree index.')
                 # insert a record with the name of the index and the table on which it's created to the meta_indexes table
-                self.tables['meta_indexes']._insert([table_name, index_name])
+                self.tables['meta_indexes']._insert(
+                    [table_name, index_name, column_name])
                 # crate the actual index
-                self._construct_index(table_name, index_name)
+                self._construct_index(table_name, index_name, column_name)
+                self.save_database()
+            elif index_type == 'HASH' or index_type == 'hash':
+                logging.info('Creating Hash index')
+                # insert a record with the name of the index and the table on which it's created to the meta_indexes table
+                self.tables['meta_indexes']._insert(
+                    [table_name, index_name, column_name])
+                # crate the actual index
+                self._construct_index_hash(table_name, index_name, column_name)
                 self.save_database()
         else:
             raise Exception(
